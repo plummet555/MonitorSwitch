@@ -1,5 +1,7 @@
 using Microsoft.Win32;
 using MonitorSwitchService;
+using Serilog;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -11,6 +13,7 @@ namespace MonitorSwitch
     {
         private const String EVENT_LOG_SOURCE = "MonitorSwitch";
         private const String EVENT_LOG_NAME = "MonitorSwitch";
+        private const String LOG_FILE_PATH = @".\logs\MonitorSwitch.txt";
         private const String APPLICATION_NAME = @"MonitorSwitch /minimized";
 
         private const String REG_KEY = @"SOFTWARE\Plummet\MonitorSwitch";
@@ -24,7 +27,7 @@ namespace MonitorSwitch
         private UInt32 monitorIndex;
         private bool switchOnResume;
 
-        private EventLog mssEventLog;
+        //private EventLog mssEventLog;
         private int state;
 
         private enum STATE : int
@@ -38,18 +41,26 @@ namespace MonitorSwitch
         {
             InitializeComponent();
 
-            mssEventLog = new System.Diagnostics.EventLog();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console()
+                .WriteTo.Trace()
+                .WriteTo.File(LOG_FILE_PATH, rollingInterval: RollingInterval.Day)
+                .CreateLogger();
+            
 
-            if (!System.Diagnostics.EventLog.SourceExists(EVENT_LOG_SOURCE))
-            {
-                System.Diagnostics.EventLog.CreateEventSource(
-                    EVENT_LOG_SOURCE, EVENT_LOG_NAME);
-            }
+            //mssEventLog = new System.Diagnostics.EventLog();
 
-            mssEventLog.Source = EVENT_LOG_SOURCE;
-            mssEventLog.Log = EVENT_LOG_NAME;
+            //if (!System.Diagnostics.EventLog.SourceExists(EVENT_LOG_SOURCE))
+            //{
+             //   System.Diagnostics.EventLog.CreateEventSource(
+              //      EVENT_LOG_SOURCE, EVENT_LOG_NAME);
+            //}
 
-            mssEventLog.WriteEntry("Application starting");
+            //mssEventLog.Source = EVENT_LOG_SOURCE;
+            //mssEventLog.Log = EVENT_LOG_NAME;
+
+            Log.Information("Application starting");
 
             if ((args.Length > 0) && (args[0].Equals("-minimized")))
             {
@@ -80,8 +91,8 @@ namespace MonitorSwitch
             if (key == null)
             {
                 label_status.Text = "No registry subkey";
-                mssEventLog.WriteEntry("No registry subkey");
-                mssEventLog.Close();
+                Log.Information("No registry subkey");
+                //mssEventLog.Close();
                 return;
             }
 
@@ -90,8 +101,8 @@ namespace MonitorSwitch
             if (usbDevicePathChk == null)
             {
                 label_status.Text = "No USB device path string in registry";
-                mssEventLog.WriteEntry("No USB device path string in registry");
-                mssEventLog.Close();
+                Log.Information("No USB device path string in registry");
+                //mssEventLog.Close();
                 return;
             }
 
@@ -101,8 +112,8 @@ namespace MonitorSwitch
             if (valSource == null)
             {
                 label_status.Text = "No monitor source value in registry";
-                mssEventLog.WriteEntry("No monitor source value in registry");
-                mssEventLog.Close();
+                Log.Information("No monitor source value in registry");
+                //mssEventLog.Close();
                 return;
             }
 
@@ -112,8 +123,8 @@ namespace MonitorSwitch
             if (valIndex == null)
             {
                 label_status.Text = "No monitor index value in registry";
-                mssEventLog.WriteEntry("No monitor index value in registry");
-                mssEventLog.Close();
+                Log.Information("No monitor index value in registry");
+                //mssEventLog.Close();
                 return;
             }
 
@@ -147,8 +158,8 @@ namespace MonitorSwitch
             if (key == null)
             {
                 label_status.Text = "No registry subkey";
-                mssEventLog.WriteEntry("No registry subkey");
-                mssEventLog.Close();
+                Log.Information("No registry subkey");
+                //mssEventLog.Close();
                 return;
             }
 
@@ -178,6 +189,7 @@ namespace MonitorSwitch
             numericUpDown_source.Enabled = false;
             checkBox_autoStart.Enabled = false;
             checkBox_switchOnResume.Enabled = false;
+            checkBox_logUSBDeviceArrival.Enabled = false;
         }
 
         protected void stopMonitoring ()
@@ -193,6 +205,7 @@ namespace MonitorSwitch
             numericUpDown_source.Enabled = true;
             checkBox_autoStart.Enabled = true;
             checkBox_switchOnResume.Enabled = true;
+            checkBox_logUSBDeviceArrival.Enabled = true;
         }
 
         protected override void OnResize(EventArgs e)
@@ -219,7 +232,10 @@ namespace MonitorSwitch
 
                         if (DeviceNotification.IsUsbDevice(m.LParam, out name))
                         {
-                            mssEventLog.WriteEntry("Device arrival: " + name);
+                            if (checkBox_logUSBDeviceArrival.Checked)
+                            {
+                                Log.Information("Device arrival: " + name);
+                            }
                             if (name.Equals(usbDevicePath))
                             {
                                 SwitchMonitor();
@@ -233,16 +249,16 @@ namespace MonitorSwitch
 
         private void SwitchMonitor()
         {
-            mssEventLog.WriteEntry("Switching monitor " + monitorIndex + " to source " + monitorSource);
+            Log.Information("Switching monitor " + monitorIndex + " to source " + monitorSource);
             int error;
             DisplayDDC.Init();
             if (DisplayDDC.SetDisplaySource((int)monitorIndex, (int)monitorSource, out error))
             {
-                mssEventLog.WriteEntry("Switched monitor " + monitorIndex + " to source " + monitorSource);
+                Log.Information("Switched monitor " + monitorIndex + " to source " + monitorSource);
             }
             else
             {
-                mssEventLog.WriteEntry("Error switching monitor " + monitorIndex + " to source " + monitorSource + " , code " + error);
+                Log.Information("Error switching monitor " + monitorIndex + " to source " + monitorSource + " , code " + error);
             }
             DisplayDDC.Cleanup();
         }
@@ -284,26 +300,28 @@ namespace MonitorSwitch
             }
             else
             {
-                registryKey.DeleteValue(APPLICATION_NAME);
+                registryKey.DeleteValue(APPLICATION_NAME, false);
             }
         }
 
-
-        protected void OnStop()
+        protected override void OnClosing(CancelEventArgs e)
         {
-            mssEventLog.WriteEntry("Service stopping");
+            base.OnClosing(e);
+            Log.Information("Monitor switch application exiting");
             writeRegistryUpdateMembers();
             stopMonitoring();
-            mssEventLog.Close();
+            //mssEventLog.Close();
             notifyIcon.Dispose();
+            Log.CloseAndFlush();
         }
 
+        
         private void OnPowerChange(object s, PowerModeChangedEventArgs e)
         {
             switch (e.Mode)
             {
                 case PowerModes.Resume:
-                    mssEventLog.WriteEntry("Power resume, switch on resume: " + switchOnResume);
+                    Log.Information("Power resume, switch on resume: " + switchOnResume);
 
                     if (switchOnResume)
                     {
@@ -345,10 +363,11 @@ namespace MonitorSwitch
             RegisterInStartup(checkBox_autoStart.Checked);
         }
 
-        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        private void checkBox1_switchOnResume_CheckedChanged(object sender, EventArgs e)
         {
             writeRegistryUpdateMembers();
         }
+
     }
 }
 

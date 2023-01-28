@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace MonitorSwitch
 {
     internal static class Program

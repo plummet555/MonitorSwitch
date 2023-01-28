@@ -41,6 +41,7 @@
             this.button_main = new System.Windows.Forms.Button();
             this.checkBox_autoStart = new System.Windows.Forms.CheckBox();
             this.checkBox_switchOnResume = new System.Windows.Forms.CheckBox();
+            this.checkBox_logUSBDeviceArrival = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_index)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_source)).BeginInit();
             this.SuspendLayout();
@@ -133,19 +134,30 @@
             // checkBox_switchOnResume
             // 
             this.checkBox_switchOnResume.AutoSize = true;
-            this.checkBox_switchOnResume.Location = new System.Drawing.Point(243, 156);
+            this.checkBox_switchOnResume.Location = new System.Drawing.Point(228, 156);
             this.checkBox_switchOnResume.Name = "checkBox_switchOnResume";
             this.checkBox_switchOnResume.Size = new System.Drawing.Size(156, 19);
             this.checkBox_switchOnResume.TabIndex = 12;
             this.checkBox_switchOnResume.Text = "Switch on power resume";
             this.checkBox_switchOnResume.UseVisualStyleBackColor = true;
-            this.checkBox_switchOnResume.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+            this.checkBox_switchOnResume.CheckedChanged += new System.EventHandler(this.checkBox1_switchOnResume_CheckedChanged);
+            // 
+            // checkBox_logUSBDeviceArrival
+            // 
+            this.checkBox_logUSBDeviceArrival.AutoSize = true;
+            this.checkBox_logUSBDeviceArrival.Location = new System.Drawing.Point(390, 156);
+            this.checkBox_logUSBDeviceArrival.Name = "checkBox_logUSBDeviceArrival";
+            this.checkBox_logUSBDeviceArrival.Size = new System.Drawing.Size(142, 19);
+            this.checkBox_logUSBDeviceArrival.TabIndex = 13;
+            this.checkBox_logUSBDeviceArrival.Text = "Log USB device arrival";
+            this.checkBox_logUSBDeviceArrival.UseVisualStyleBackColor = true;
             // 
             // MonitorSwitchForm1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(635, 186);
+            this.Controls.Add(this.checkBox_logUSBDeviceArrival);
             this.Controls.Add(this.checkBox_switchOnResume);
             this.Controls.Add(this.checkBox_autoStart);
             this.Controls.Add(this.button_main);
@@ -180,5 +192,6 @@
         private Button button_main;
         private CheckBox checkBox_autoStart;
         private CheckBox checkBox_switchOnResume;
+        private CheckBox checkBox_logUSBDeviceArrival;
     }
 }
