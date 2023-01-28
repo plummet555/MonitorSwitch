@@ -43,6 +43,6 @@ When you have configured the settings, click Start to begin monitoring. You can 
 'Switch on power resume' means that the monitor will be switched when the PC power resumes, in addition to when the monitored USB device arrives.
 
 
-#Registry
+# Registry
 
 Registry values are stored in SOFTWARE\Plummet\MonitorSwitch
