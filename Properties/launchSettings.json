@@ -1,7 +1,8 @@
 {
   "profiles": {
     "MonitorSwitch": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-minimized"
     }
   }
 }

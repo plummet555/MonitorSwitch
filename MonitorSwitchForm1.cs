@@ -14,7 +14,8 @@ namespace MonitorSwitch
         private const String EVENT_LOG_SOURCE = "MonitorSwitch";
         private const String EVENT_LOG_NAME = "MonitorSwitch";
         private const String LOG_FILE_PATH = @".\logs\MonitorSwitch.txt";
-        private const String APPLICATION_NAME = @"MonitorSwitch /minimized";
+        private const String APPLICATION_NAME = @"MonitorSwitch";
+        private const String MINIMIZED_FLAG = @"-minimized";
 
         private const String REG_KEY = @"SOFTWARE\Plummet\MonitorSwitch";
         private const String REG_DEV_PATH = "UsbDevice";
@@ -26,8 +27,6 @@ namespace MonitorSwitch
         private UInt32 monitorSource;
         private UInt32 monitorIndex;
         private bool switchOnResume;
-
-        //private EventLog mssEventLog;
         private int state;
 
         private enum STATE : int
@@ -47,22 +46,13 @@ namespace MonitorSwitch
                 .WriteTo.Trace()
                 .WriteTo.File(LOG_FILE_PATH, rollingInterval: RollingInterval.Day)
                 .CreateLogger();
-            
-
-            //mssEventLog = new System.Diagnostics.EventLog();
-
-            //if (!System.Diagnostics.EventLog.SourceExists(EVENT_LOG_SOURCE))
-            //{
-             //   System.Diagnostics.EventLog.CreateEventSource(
-              //      EVENT_LOG_SOURCE, EVENT_LOG_NAME);
-            //}
-
-            //mssEventLog.Source = EVENT_LOG_SOURCE;
-            //mssEventLog.Log = EVENT_LOG_NAME;
 
             Log.Information("Application starting");
 
-            if ((args.Length > 0) && (args[0].Equals("-minimized")))
+            notifyIcon.Visible = false;
+            state = (int)STATE.STOPPED;
+
+            if ((args.Length > 0) && (args[0].Equals(MINIMIZED_FLAG)))
             {
                 this.WindowState = FormWindowState.Minimized;
             }
@@ -71,28 +61,21 @@ namespace MonitorSwitch
                 this.WindowState = FormWindowState.Normal;
             }
 
-            notifyIcon.Visible = false;
-            state = (int)STATE.STOPPED;
-
             checkBox_autoStart.Checked = CheckStartupEnabled();
 
             readRegistry();
-            startMonitoring();
-
-            Debug.WriteLine("Start");
+            startMonitoring();           
 
         }
 
         protected void readRegistry()
         {
             RegistryKey? key = Registry.CurrentUser.OpenSubKey(REG_KEY);
-            //TODO open or create?
 
             if (key == null)
             {
                 label_status.Text = "No registry subkey";
                 Log.Information("No registry subkey");
-                //mssEventLog.Close();
                 return;
             }
 
@@ -102,7 +85,6 @@ namespace MonitorSwitch
             {
                 label_status.Text = "No USB device path string in registry";
                 Log.Information("No USB device path string in registry");
-                //mssEventLog.Close();
                 return;
             }
 
@@ -113,7 +95,6 @@ namespace MonitorSwitch
             {
                 label_status.Text = "No monitor source value in registry";
                 Log.Information("No monitor source value in registry");
-                //mssEventLog.Close();
                 return;
             }
 
@@ -124,7 +105,6 @@ namespace MonitorSwitch
             {
                 label_status.Text = "No monitor index value in registry";
                 Log.Information("No monitor index value in registry");
-                //mssEventLog.Close();
                 return;
             }
 
@@ -159,7 +139,6 @@ namespace MonitorSwitch
             {
                 label_status.Text = "No registry subkey";
                 Log.Information("No registry subkey");
-                //mssEventLog.Close();
                 return;
             }
 
@@ -208,16 +187,26 @@ namespace MonitorSwitch
             checkBox_logUSBDeviceArrival.Enabled = true;
         }
 
-        protected override void OnResize(EventArgs e)
+        protected override void OnLoad(EventArgs e)
         {
-            base.OnResize(e);
-        
             if (this.WindowState == FormWindowState.Minimized)
             {
-                Hide();
+                this.Hide();
                 notifyIcon.Visible = true;
             }
-        
+
+            base.OnLoad(e);
+        }
+        protected override void OnResize(EventArgs e)
+        {                   
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                this.Hide();
+                notifyIcon.Visible = true;
+            }
+
+            base.OnResize(e);
+
         }
 
         protected override void WndProc(ref Message m)
@@ -281,7 +270,7 @@ namespace MonitorSwitch
             }
 
             String startupPath = (String)startupPathCheck;
-            return (startupPath.Equals(Application.ExecutablePath));
+            return (startupPath.Equals(Application.ExecutablePath + " " + MINIMIZED_FLAG));
 
         }
         private void RegisterInStartup(bool isChecked)
@@ -296,7 +285,7 @@ namespace MonitorSwitch
 
             if (isChecked)
             {
-                registryKey.SetValue(APPLICATION_NAME, Application.ExecutablePath);
+                registryKey.SetValue(APPLICATION_NAME, Application.ExecutablePath + @" -minimized");
             }
             else
             {
@@ -306,13 +295,24 @@ namespace MonitorSwitch
 
         protected override void OnClosing(CancelEventArgs e)
         {
+            if (state == (int)STATE.RUNNING)
+            {
+                if (MessageBox.Show("Are you sure you to stop monitoring and exit?", "Monitor Switch", MessageBoxButtons.YesNo) == DialogResult.No)
+                {
+                    e.Cancel = true;
+                }
+            }
+
+            if (!e.Cancel)
+            {
+                Log.Information("Monitor switch application exiting");
+                writeRegistryUpdateMembers();
+                stopMonitoring();
+                notifyIcon.Dispose();
+                Log.CloseAndFlush();
+            }
+
             base.OnClosing(e);
-            Log.Information("Monitor switch application exiting");
-            writeRegistryUpdateMembers();
-            stopMonitoring();
-            //mssEventLog.Close();
-            notifyIcon.Dispose();
-            Log.CloseAndFlush();
         }
 
         
